@@ -36,12 +36,7 @@ router.get('/:id', authMiddleware, authorize('profissional'), async (req: Reques
 
   try {
     const paciente = await prisma.paciente.findUnique({
-      where: { id: pacienteId },
-      include: {
-        usuario: {
-          select: { nome: true, email: true, telefone: true }
-        }
-      }
+      where: { id: pacienteId }
     });
 
     if (!paciente) {
@@ -67,12 +62,7 @@ router.get('/meus-dados', authMiddleware, async (req: Request, res: Response): P
 
   try {
     const paciente = await prisma.paciente.findUnique({
-      where: { usuarioId: user.id },
-      include: {
-        usuario: {
-          select: { nome: true, email: true, telefone: true }
-        }
-      }
+      where: { id: user.id }
     });
 
     if (!paciente) {
@@ -90,14 +80,7 @@ router.get('/meus-dados', authMiddleware, async (req: Request, res: Response): P
 // 📋 Listar todos os pacientes – somente profissionais
 router.get('/', authMiddleware, authorize('profissional'), async (req: Request, res: Response): Promise<void> => {
   try {
-    const pacientes = await prisma.paciente.findMany({
-      include: {
-        usuario: {
-          select: { nome: true, email: true, telefone: true }
-        }
-      }
-    });
-
+    const pacientes = await prisma.paciente.findMany();
     res.json(pacientes);
   } catch (error) {
     console.error('❌ Erro ao listar pacientes:', error);

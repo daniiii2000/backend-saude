@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import authController from '../controllers/authController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 import { authorize } from '../middlewares/authorize';
@@ -10,8 +10,8 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 
 // Rota protegida genérica (qualquer usuário autenticado)
-router.get('/perfil', authMiddleware, (req, res) => {
-  const usuario = (req as any).user;
+router.get('/perfil', authMiddleware, (req: Request, res: Response) => {
+  const usuario = req.user; // já tipado pelo middleware
   res.json({ message: 'Acesso autorizado!', usuario });
 });
 

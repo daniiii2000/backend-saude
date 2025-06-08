@@ -2,11 +2,11 @@ import { RequestHandler } from 'express';
 
 export function authorize(permittedTipo: 'paciente' | 'profissional'): RequestHandler {
   return (req, res, next) => {
-    const usuario = (req as any).user;
+    const usuario = req.user;
 
     if (!usuario || usuario.tipo !== permittedTipo) {
       res.status(403).json({ error: 'Acesso negado: perfil não autorizado' });
-      return;
+      return; // apenas return, sem retornar o `res` diretamente
     }
 
     next();

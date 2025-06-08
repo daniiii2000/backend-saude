@@ -8,43 +8,72 @@ const JWT_SECRET = process.env.JWT_SECRET || 'chave_padrao';
 
 const authController = {
   async register(req: Request, res: Response): Promise<void> {
-    const { nome, email, senha, cpf, sexo, telefone, tipo, profissao } = req.body;
+    const {
+      nome,
+      email,
+      senha,
+      cpf,
+      sexo,
+      telefone,
+      tipo,
+      tipoSanguineo,
+      profissao,
+      alergias,
+      doencas,
+      cirurgias,
+    } = req.body;
 
     try {
-      const usuarioExistente = await prisma.usuario.findUnique({ where: { email } });
+      const pacienteExistente = await prisma.paciente.findUnique({ where: { email } });
+      const profissionalExistente = await prisma.profissional.findUnique({ where: { email } });
 
-      if (usuarioExistente) {
+      if (pacienteExistente || profissionalExistente) {
         res.status(400).json({ error: 'Email já cadastrado' });
         return;
       }
 
       const hashedPassword = await bcrypt.hash(senha, 10);
 
-      const novoUsuario = await prisma.usuario.create({
-        data: {
-          nome,
-          email,
-          senha: hashedPassword,
-          cpf,
-          sexo,
-          telefone,
-          tipo,
-          profissional: tipo === 'profissional'
-            ? { create: { profissao: profissao || 'profissional' } }
-            : undefined,
-          paciente: tipo === 'paciente'
-            ? {
-                create: {
-                  doencas: req.body.doencas || null,
-                  alergias: req.body.alergias || null,
-                  cirurgias: req.body.cirurgias || null,
-                }
-              }
-            : undefined,
-        },
-      });
+      if (tipo === 'paciente') {
+        const novoPaciente = await prisma.paciente.create({
+          data: {
+            nome,
+            email,
+            senha: hashedPassword,
+            cpf,
+            sexo,
+            telefone,
+            tipo,
+            tipoSanguineo,
+            alergias,
+            doencas,
+            cirurgias,
+          },
+        });
 
-      res.status(201).json({ message: 'Usuário cadastrado com sucesso', usuarioId: novoUsuario.id });
+        res.status(201).json({ message: 'Paciente cadastrado com sucesso', id: novoPaciente.id });
+      } else if (tipo === 'profissional') {
+        const novoProfissional = await prisma.profissional.create({
+          data: {
+            nome,
+            email,
+            senha: hashedPassword,
+            cpf,
+            sexo,
+            telefone,
+            tipo,
+            profissao,
+            tipoSanguineo,
+            alergias,
+            doencas,
+            cirurgias,
+          },
+        });
+
+        res.status(201).json({ message: 'Profissional cadastrado com sucesso', id: novoProfissional.id });
+      } else {
+        res.status(400).json({ error: 'Tipo inválido. Deve ser "paciente" ou "profissional".' });
+      }
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Erro ao cadastrar usuário' });
@@ -55,10 +84,10 @@ const authController = {
     const { email, senha } = req.body;
 
     try {
-      const usuario = await prisma.usuario.findUnique({
-        where: { email },
-        include: { paciente: true, profissional: true },
-      });
+      const paciente = await prisma.paciente.findUnique({ where: { email } });
+      const profissional = await prisma.profissional.findUnique({ where: { email } });
+
+      const usuario = paciente || profissional;
 
       if (!usuario) {
         res.status(404).json({ error: 'Usuário não encontrado' });
@@ -72,7 +101,11 @@ const authController = {
       }
 
       const token = jwt.sign(
-        { id: usuario.id, email: usuario.email, tipo: usuario.tipo },
+        {
+          id: usuario.id,
+          email: usuario.email,
+          tipo: usuario.tipo,
+        },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
@@ -85,9 +118,6 @@ const authController = {
           nome: usuario.nome,
           email: usuario.email,
           tipo: usuario.tipo,
-          perfil: usuario.perfil,
-          paciente: usuario.paciente,
-          profissional: usuario.profissional,
         },
       });
     } catch (error) {
