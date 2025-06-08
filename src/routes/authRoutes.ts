@@ -11,8 +11,8 @@ router.post('/login', authController.login);
 
 // Rota protegida genérica (qualquer usuário autenticado)
 router.get('/perfil', authMiddleware, (req: Request, res: Response) => {
-  const usuario = req.user; // já tipado pelo middleware
-  res.json({ message: 'Acesso autorizado!', usuario });
+  const usuario = req.user;
+  res.json({ usuario });
 });
 
 // Rota só para profissionais

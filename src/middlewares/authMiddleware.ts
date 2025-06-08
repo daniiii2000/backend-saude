@@ -1,4 +1,4 @@
-import { RequestHandler } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chave_padrao';
@@ -11,37 +11,30 @@ interface TokenPayload {
   exp: number;
 }
 
+// Estende a tipagem do Express para incluir o campo `user`
 declare module 'express-serve-static-core' {
   interface Request {
     user?: TokenPayload;
   }
 }
 
-export const authMiddleware: RequestHandler = (req, res, next) => {
+export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    console.warn('⚠️ [AUTH] Token não fornecido no cabeçalho Authorization');
-    res.status(401).json({ error: 'Token não fornecido' });
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(403).json({ error: 'Token não fornecido' });
     return;
   }
 
-  const [prefixo, token] = authHeader.split(' ');
-
-  if (prefixo !== 'Bearer' || !token) {
-    console.warn('⚠️ [AUTH] Cabeçalho Authorization mal formatado');
-    res.status(401).json({ error: 'Formato do token inválido' });
-    return;
-  }
+  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
     req.user = decoded;
-
     console.log(`✅ [AUTH] Usuário autenticado: ${decoded.email} (ID: ${decoded.id})`);
     next();
   } catch (err) {
     console.error('❌ [AUTH] Erro ao verificar token:', err);
-    res.status(401).json({ error: 'Token inválido' });
+    res.status(403).json({ error: 'Token inválido' });
   }
-};
+}
