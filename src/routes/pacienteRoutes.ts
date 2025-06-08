@@ -6,6 +6,51 @@ import { authorize } from '../middlewares/authorize';
 const router = Router();
 const prisma = new PrismaClient();
 
+// ✅ Cadastro de paciente (público, sem token)
+router.post('/', async (req: Request, res: Response): Promise<void> => {
+  const {
+    nome,
+    email,
+    senha,
+    telefone,
+    sexo,
+    doencas,
+    alergias,
+    cirurgias,
+    tipoSanguineo,
+    cpf
+  } = req.body;
+
+  try {
+    const pacienteExistente = await prisma.paciente.findUnique({ where: { email } });
+    if (pacienteExistente) {
+      res.status(400).json({ error: 'Email já cadastrado' });
+      return;
+    }
+
+    const novoPaciente = await prisma.paciente.create({
+      data: {
+        nome,
+        email,
+        senha,
+        telefone,
+        sexo,
+        doencas,
+        alergias,
+        cirurgias,
+        tipoSanguineo,
+        cpf,
+        tipo: 'paciente'
+      }
+    });
+
+    res.status(201).json({ message: 'Paciente cadastrado com sucesso', paciente: novoPaciente });
+  } catch (error) {
+    console.error('❌ Erro ao cadastrar paciente:', error);
+    res.status(500).json({ error: 'Erro ao cadastrar paciente' });
+  }
+});
+
 // 🔁 Atualizar dados clínicos – somente profissionais
 router.put('/:id', authMiddleware, authorize('profissional'), async (req: Request, res: Response): Promise<void> => {
   const pacienteId = req.params.id;
