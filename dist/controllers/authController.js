@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
-const bcrypt_1 = __importDefault(require("bcrypt"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const prisma = new client_1.PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'chave_padrao';
@@ -18,7 +18,7 @@ const authController = {
                 res.status(400).json({ error: 'Email já cadastrado' });
                 return;
             }
-            const hashedPassword = await bcrypt_1.default.hash(senha, 10);
+            const hashedPassword = await bcryptjs_1.default.hash(senha, 10);
             if (tipo === 'paciente') {
                 const novoPaciente = await prisma.paciente.create({
                     data: {
@@ -75,7 +75,7 @@ const authController = {
                 res.status(404).json({ error: 'Usuário não encontrado' });
                 return;
             }
-            const senhaValida = await bcrypt_1.default.compare(senha, usuario.senha);
+            const senhaValida = await bcryptjs_1.default.compare(senha, usuario.senha);
             if (!senhaValida) {
                 res.status(401).json({ error: 'Senha incorreta' });
                 return;
