@@ -5,14 +5,14 @@ import { authMiddleware } from '../middlewares/authMiddleware';
 const router = Router();
 const prisma = new PrismaClient();
 
-router.get('/meus-dados', authMiddleware, async (req: Request, res: Response) => {
+router.get('/meus-dados', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   console.log('User em /profissional/meus-dados:', req.user);
 
   const user = req.user;
 
   if (!user || user.tipo.toLowerCase() !== 'profissional') {
     res.status(403).json({ error: 'Acesso permitido apenas para profissionais' });
-    return; // importante para não continuar o código
+    return;
   }
 
   try {
