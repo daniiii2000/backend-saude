@@ -98,9 +98,11 @@ router.get('/:id', authMiddleware, authorize('profissional'), async (req: Reques
 
 // 👤 Paciente vê seus próprios dados
 router.get('/meus-dados', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  console.log('User em /meus-dados:', req.user);
+
   const user = req.user;
 
-  if (!user || user.tipo !== 'paciente') {
+  if (!user || user.tipo.toLowerCase() !== 'paciente') {
     res.status(403).json({ error: 'Acesso permitido apenas para pacientes' });
     return;
   }
