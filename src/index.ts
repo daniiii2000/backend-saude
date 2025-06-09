@@ -3,7 +3,6 @@ import cors from 'cors';
 import * as dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import pacienteRoutes from './routes/pacienteRoutes';
-// ❌ Removido: import usuarioRoutes from './routes/usuarioRoutes';
 
 dotenv.config();
 
@@ -17,9 +16,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rotas
-app.use('/pacientes', pacienteRoutes);
-// ❌ Removido: app.use('/usuarios', usuarioRoutes);
+// ✅ Ajustado para coincidir com a rota usada no Postman
+app.use('/paciente', pacienteRoutes);
 app.use('/auth', authRoutes);
 
 app.get('/', (req, res) => {

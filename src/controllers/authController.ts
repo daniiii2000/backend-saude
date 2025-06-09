@@ -94,6 +94,11 @@ const authController = {
         return;
       }
 
+      if (!usuario.senha) {
+        res.status(500).json({ error: 'Senha não definida no banco de dados' });
+        return;
+      }
+
       const senhaValida = await bcrypt.compare(senha, usuario.senha);
       if (!senhaValida) {
         res.status(401).json({ error: 'Senha incorreta' });
