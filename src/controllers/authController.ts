@@ -33,8 +33,9 @@ const authController = {
       }
 
       const hashedPassword = await bcrypt.hash(senha, 10);
+      const tipoNormalized = (tipo || '').toLowerCase().trim();
 
-      if (tipo === 'paciente') {
+      if (tipoNormalized === 'paciente') {
         const novoPaciente = await prisma.paciente.create({
           data: {
             nome,
@@ -43,7 +44,7 @@ const authController = {
             cpf,
             sexo,
             telefone,
-            tipo,
+            tipo: tipoNormalized,
             tipoSanguineo,
             alergias,
             doencas,
@@ -52,7 +53,7 @@ const authController = {
         });
 
         res.status(201).json({ message: 'Paciente cadastrado com sucesso', id: novoPaciente.id });
-      } else if (tipo === 'profissional') {
+      } else if (tipoNormalized === 'profissional') {
         const novoProfissional = await prisma.profissional.create({
           data: {
             nome,
@@ -61,7 +62,7 @@ const authController = {
             cpf,
             sexo,
             telefone,
-            tipo,
+            tipo: tipoNormalized,
             profissao,
             tipoSanguineo,
             alergias,
@@ -109,7 +110,7 @@ const authController = {
         {
           id: usuario.id,
           email: usuario.email,
-          tipo: usuario.tipo,
+          tipo: (usuario.tipo || '').toLowerCase().trim(),
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -122,7 +123,7 @@ const authController = {
           id: usuario.id,
           nome: usuario.nome,
           email: usuario.email,
-          tipo: usuario.tipo,
+          tipo: (usuario.tipo || '').toLowerCase().trim(),
         },
       });
     } catch (error) {
