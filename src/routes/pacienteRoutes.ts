@@ -6,7 +6,7 @@ import { authorize } from '../middlewares/authorize';
 const router = Router();
 const prisma = new PrismaClient();
 
-router.get('/meus-dados', authMiddleware, authorize('profissional'), async (req: Request, res: Response) => {
+router.get('/meus-dados', authMiddleware, authorize('paciente'), async (req: Request, res: Response) => {
   const user = req.user!;
   try {
     const profissional = await prisma.profissional.findUnique({ where: { id: user.id } });
