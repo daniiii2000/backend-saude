@@ -9,12 +9,12 @@ const prisma = new PrismaClient();
 router.get('/meus-dados', authMiddleware, authorize('paciente'), async (req: Request, res: Response) => {
   const user = req.user!;
   try {
-    const profissional = await prisma.profissional.findUnique({ where: { id: user.id } });
-    if (!profissional) {
-      res.status(404).json({ error: 'Profissional não encontrado' });
+    const paciente = await prisma.paciente.findUnique({ where: { id: user.id } });
+    if (!paciente) {
+      res.status(404).json({ error: 'Paciente não encontrado' });
       return;
     }
-    res.json(profissional);
+    res.json(paciente);
   } catch (error) {
     res.status(400).json({ error: 'Erro ao buscar dados' });
   }
