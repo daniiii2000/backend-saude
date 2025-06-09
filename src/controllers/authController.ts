@@ -24,10 +24,10 @@ const authController = {
     } = req.body;
 
     try {
-      const pacienteExistente = await prisma.paciente.findUnique({ where: { email } });
+      const paciente = await prisma.paciente.findUnique({ where: { email } });
       const profissionalExistente = await prisma.profissional.findUnique({ where: { email } });
 
-      if (pacienteExistente || profissionalExistente) {
+      if (paciente || profissionalExistente) {
         res.status(400).json({ error: 'Email já cadastrado' });
         return;
       }
