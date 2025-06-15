@@ -24,16 +24,25 @@ const authController = {
     } = req.body;
 
     try {
-      const pacienteExistente = await prisma.paciente.findUnique({ where: { email } });
-      const profissionalExistente = await prisma.profissional.findUnique({ where: { email } });
+      const tipoNormalized = (tipo || '').toLowerCase().trim();
+      if (!tipoNormalized || !['paciente', 'profissional'].includes(tipoNormalized)) {
+        res.status(400).json({ error: 'Tipo inválido. Deve ser "paciente" ou "profissional".' });
+        return;
+      }
 
-      if (pacienteExistente || profissionalExistente) {
+      let existente;
+      if (tipoNormalized === 'paciente') {
+        existente = await prisma.paciente.findUnique({ where: { email } });
+      } else if (tipoNormalized === 'profissional') {
+        existente = await prisma.profissional.findUnique({ where: { email } });
+      }
+
+      if (existente) {
         res.status(400).json({ error: 'Email já cadastrado' });
         return;
       }
 
       const hashedPassword = await bcrypt.hash(senha, 10);
-      const tipoNormalized = (tipo || '').toLowerCase().trim();
 
       if (tipoNormalized === 'paciente') {
         const novoPaciente = await prisma.paciente.create({
@@ -52,8 +61,18 @@ const authController = {
           },
         });
 
-        res.status(201).json({ message: 'Paciente cadastrado com sucesso', id: novoPaciente.id });
-      } else if (tipoNormalized === 'profissional') {
+        const token = jwt.sign(
+          { id: novoPaciente.id, email: novoPaciente.email, tipo: tipoNormalized },
+          JWT_SECRET,
+          { expiresIn: '7d' }
+        );
+
+        res.status(201).json({
+          message: 'Paciente cadastrado com sucesso',
+          id: novoPaciente.id,
+          token,
+        });
+      } else {
         const novoProfissional = await prisma.profissional.create({
           data: {
             nome,
@@ -71,9 +90,17 @@ const authController = {
           },
         });
 
-        res.status(201).json({ message: 'Profissional cadastrado com sucesso', id: novoProfissional.id });
-      } else {
-        res.status(400).json({ error: 'Tipo inválido. Deve ser "paciente" ou "profissional".' });
+        const token = jwt.sign(
+          { id: novoProfissional.id, email: novoProfissional.email, tipo: tipoNormalized },
+          JWT_SECRET,
+          { expiresIn: '7d' }
+        );
+
+        res.status(201).json({
+          message: 'Profissional cadastrado com sucesso',
+          id: novoProfissional.id,
+          token,
+        });
       }
     } catch (error) {
       console.error(error);
