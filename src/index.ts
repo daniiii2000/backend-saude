@@ -1,9 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
+
 import authRoutes from './routes/authRoutes';
 import pacienteRoutes from './routes/pacienteRoutes';
-import profissionalRoutes from './routes/profissionalRoutes'; // <-- importar
+import profissionalRoutes from './routes/profissionalRoutes';
+import pacienteQrRoutes from './routes/pacienteQrRoutes'; // ✅ Importado correctamente
 
 dotenv.config();
 
@@ -16,14 +18,17 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/paciente', pacienteRoutes);
+// ✅ Registro das rotas
 app.use('/auth', authRoutes);
-app.use('/profissional', profissionalRoutes); // <-- registrar
+app.use('/paciente', pacienteRoutes);
+app.use('/profissional', profissionalRoutes);
+app.use(pacienteQrRoutes); // ✅ Rota de QR ativa fora de prefixo "/paciente"
 
 app.get('/', (req, res) => {
   res.send('API rodando...');
 });
 
+// Middleware de erro
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('[ERRO INTERNO]', err);
   res.status(500).json({ erro: 'Erro interno no servidor' });
