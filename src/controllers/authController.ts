@@ -1,5 +1,3 @@
-// src/controllers/authController.ts
-
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -25,9 +23,16 @@ const authController = {
       alergias,
       doencas,
       cirurgias,
-      emergencyContactPhone,            // ← nuevo
-      biometricEnabled = false,         // ← nuevo
+      emergencyContactPhone,
+      biometricEnabled = false,
     } = req.body;
+
+    // Log para verificar o tipo exato
+    console.log('››› Tipo recebido:', tipo);
+
+    // Normaliza telefones para ficar só dígitos
+    const telefoneClean = String(telefone).replace(/\D/g, '');
+    const emergencyClean = String(emergencyContactPhone).replace(/\D/g, '');
 
     try {
       // 1. Normaliza e valida o tipo
@@ -50,7 +55,7 @@ const authController = {
 
       // 3. Valida telefone de emergência (apenas dígitos, 8–15 chars)
       const phoneRegex = /^\d{8,15}$/;
-      if (!phoneRegex.test(emergencyContactPhone)) {
+      if (!phoneRegex.test(emergencyClean)) {
         res.status(400).json({ error: 'Telefone de contato de emergência inválido' });
         return;
       }
@@ -67,14 +72,14 @@ const authController = {
             senha: hashedPassword,
             cpf,
             sexo,
-            telefone,
+            telefone: telefoneClean,
             tipo: tipoNormalized,
             tipoSanguineo,
             alergias,
             doencas,
             cirurgias,
-            emergencyContactPhone,    // ← guardado
-            biometricEnabled,         // ← guardado
+            emergencyContactPhone: emergencyClean,
+            biometricEnabled,
           },
         });
         res.status(201).json({ message: 'Paciente cadastrado com sucesso', id: novoPaciente.id });
@@ -86,14 +91,14 @@ const authController = {
             senha: hashedPassword,
             cpf,
             sexo,
-            telefone,
+            telefone: telefoneClean,
             tipo: tipoNormalized,
             profissao,
             tipoSanguineo,
             alergias,
             doencas,
             cirurgias,
-            emergencyContactPhone,    // ← guardado também para profissional, se quiser
+            emergencyContactPhone: emergencyClean,
             biometricEnabled,
           },
         });
