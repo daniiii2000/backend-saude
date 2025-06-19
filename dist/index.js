@@ -1,57 +1,70 @@
-// index.js (atualizado)
-
-'use strict';
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const authRoutes = require('./routes/authRoutes');
-const pacienteRoutes = require('./routes/pacienteRoutes');
-// const usuarioRoutes = require('./routes/usuarioRoutes');
-
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const dotenv = __importStar(require("dotenv"));
+const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
+const pacienteRoutes_1 = __importDefault(require("./routes/pacienteRoutes"));
+const profissionalRoutes_1 = __importDefault(require("./routes/profissionalRoutes"));
+const pacienteQrRoutes_1 = __importDefault(require("./routes/pacienteQrRoutes")); // ✅ Importado correctamente
 dotenv.config();
-
-const app = express();
-
-// 1️⃣ CORS e JSON parser
-app.use(cors());
-app.use(express.json());
-
-// 2️⃣ Log de todas as requisições
+const app = (0, express_1.default)();
+app.use((0, cors_1.default)());
+app.use(express_1.default.json());
 app.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.url}`);
-  next();
+    console.log(`[${req.method}] ${req.url}`);
+    next();
 });
-
-// 3️⃣ Health-check
-app.get('/health', (req, res) => {
-  console.log('✔️ GET /health recebido');
-  res.json({ status: 'OK' });
-});
-
-// 4️⃣ Rotas de negócio
-app.use('/pacientes', pacienteRoutes);
-
-// Adicione log na rota de login dentro de authRoutes.js:
-//   router.post('/login', (req, res) => {
-//     console.log('🔔 POST /auth/login recebido:', req.body);
-//     // ...
-//   });
-
-app.use('/auth', authRoutes);
-
-// página raiz
+// ✅ Registro das rotas
+app.use('/auth', authRoutes_1.default);
+app.use('/paciente', pacienteRoutes_1.default);
+app.use('/profissional', profissionalRoutes_1.default);
+app.use(pacienteQrRoutes_1.default); // ✅ Rota de QR ativa fora de prefixo "/paciente"
 app.get('/', (req, res) => {
-  res.send('API rodando...');
+    res.send('API rodando...');
 });
-
-// 5️⃣ Middleware global de erro
+// Middleware de erro
 app.use((err, req, res, next) => {
-  console.error('[ERRO INTERNO]', err);
-  res.status(500).json({ erro: 'Erro interno no servidor' });
+    console.error('[ERRO INTERNO]', err);
+    res.status(500).json({ erro: 'Erro interno no servidor' });
 });
-
-// 6️⃣ Inicia servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

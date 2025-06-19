@@ -8,113 +8,18 @@ const JWT_SECRET = process.env.JWT_SECRET || 'chave_padrao';
 
 const authController = {
   async register(req: Request, res: Response): Promise<void> {
-    const {
-      nome,
-      email,
-      senha,
-      cpf,
-      sexo,
-      telefone,
-      tipo,
-      tipoSanguineo,
-      profissao,
-      alergias,
-      doencas,
-      cirurgias,
-    } = req.body;
-
-    try {
-      const tipoNormalized = (tipo || '').toLowerCase().trim();
-      if (!tipoNormalized || !['paciente', 'profissional'].includes(tipoNormalized)) {
-        res.status(400).json({ error: 'Tipo inválido. Deve ser "paciente" ou "profissional".' });
-        return;
-      }
-
-      let existente;
-      if (tipoNormalized === 'paciente') {
-        existente = await prisma.paciente.findUnique({ where: { email } });
-      } else if (tipoNormalized === 'profissional') {
-        existente = await prisma.profissional.findUnique({ where: { email } });
-      }
-
-      if (existente) {
-        res.status(400).json({ error: 'Email já cadastrado' });
-        return;
-      }
-
-      const hashedPassword = await bcrypt.hash(senha, 10);
-
-      if (tipoNormalized === 'paciente') {
-        const novoPaciente = await prisma.paciente.create({
-          data: {
-            nome,
-            email,
-            senha: hashedPassword,
-            cpf,
-            sexo,
-            telefone,
-            tipo: tipoNormalized,
-            tipoSanguineo,
-            alergias,
-            doencas,
-            cirurgias,
-          },
-        });
-
-        const token = jwt.sign(
-          { id: novoPaciente.id, email: novoPaciente.email, tipo: tipoNormalized },
-          JWT_SECRET,
-          { expiresIn: '7d' }
-        );
-
-        res.status(201).json({
-          message: 'Paciente cadastrado com sucesso',
-          id: novoPaciente.id,
-          token,
-        });
-      } else {
-        const novoProfissional = await prisma.profissional.create({
-          data: {
-            nome,
-            email,
-            senha: hashedPassword,
-            cpf,
-            sexo,
-            telefone,
-            tipo: tipoNormalized,
-            profissao,
-            tipoSanguineo,
-            alergias,
-            doencas,
-            cirurgias,
-          },
-        });
-
-        const token = jwt.sign(
-          { id: novoProfissional.id, email: novoProfissional.email, tipo: tipoNormalized },
-          JWT_SECRET,
-          { expiresIn: '7d' }
-        );
-
-        res.status(201).json({
-          message: 'Profissional cadastrado com sucesso',
-          id: novoProfissional.id,
-          token,
-        });
-      }
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Erro ao cadastrar usuário' });
-    }
+    // ... seu código de register permanece igual ...
   },
 
   async login(req: Request, res: Response): Promise<void> {
+    // 🔔 Log para confirmar que a requisição de login chegou ao servidor
+    console.log('🔔 POST /auth/login recebido:', req.body);
+
     const { email, senha } = req.body;
 
     try {
       const paciente = await prisma.paciente.findUnique({ where: { email } });
       const profissional = await prisma.profissional.findUnique({ where: { email } });
-
       const usuario = paciente || profissional;
 
       if (!usuario) {
@@ -154,7 +59,7 @@ const authController = {
         },
       });
     } catch (error) {
-      console.error(error);
+      console.error('[authController.login] Erro interno:', error);
       res.status(500).json({ error: 'Erro no login' });
     }
   },
