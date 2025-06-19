@@ -1,16 +1,16 @@
 // src/routes/authRoutes.ts
 
-import { Router, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import authController from '../controllers/authController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 import { PrismaClient } from '@prisma/client';
 
-const router = Router();
+const router = express.Router();
 const prisma = new PrismaClient();
 
 // Cadastro e login
 router.post('/register', authController.register);
-router.post('/login', authController.login);
+router.post('/login',    authController.login);
 
 // Perfil autenticado com retorno completo
 router.get(
