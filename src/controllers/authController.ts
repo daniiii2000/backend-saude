@@ -8,11 +8,88 @@ const JWT_SECRET = process.env.JWT_SECRET || 'chave_padrao';
 
 const authController = {
   async register(req: Request, res: Response): Promise<void> {
-    // ... seu código de register permanece igual ...
+    // 🔔 Log para confirmar que o POST /auth/register chegou ao servidor
+    console.log('🔔 POST /auth/register recebido:', req.body);
+
+    const {
+      nome,
+      email,
+      senha,
+      cpf,
+      sexo,
+      telefone,
+      tipo,
+      tipoSanguineo,
+      profissao,
+      alergias,
+      doencas,
+      cirurgias,
+    } = req.body;
+
+    try {
+      const tipoNormalized = (tipo || '').toLowerCase().trim();
+      if (!tipoNormalized || !['paciente', 'profissional'].includes(tipoNormalized)) {
+        res.status(400).json({ error: 'Tipo inválido. Deve ser "paciente" ou "profissional".' });
+        return;
+      }
+
+      let existente;
+      if (tipoNormalized === 'paciente') {
+        existente = await prisma.paciente.findUnique({ where: { email } });
+      } else {
+        existente = await prisma.profissional.findUnique({ where: { email } });
+      }
+
+      if (existente) {
+        res.status(400).json({ error: 'Email já cadastrado' });
+        return;
+      }
+
+      const hashedPassword = await bcrypt.hash(senha, 10);
+
+      if (tipoNormalized === 'paciente') {
+        const novoPaciente = await prisma.paciente.create({
+          data: {
+            nome,
+            email,
+            senha: hashedPassword,
+            cpf,
+            sexo,
+            telefone,
+            tipo: tipoNormalized,
+            tipoSanguineo,
+            alergias,
+            doencas,
+            cirurgias,
+          },
+        });
+        res.status(201).json({ message: 'Paciente cadastrado com sucesso', id: novoPaciente.id });
+      } else {
+        const novoProfissional = await prisma.profissional.create({
+          data: {
+            nome,
+            email,
+            senha: hashedPassword,
+            cpf,
+            sexo,
+            telefone,
+            tipo: tipoNormalized,
+            profissao,
+            tipoSanguineo,
+            alergias,
+            doencas,
+            cirurgias,
+          },
+        });
+        res.status(201).json({ message: 'Profissional cadastrado com sucesso', id: novoProfissional.id });
+      }
+    } catch (error) {
+      console.error('[authController.register] Erro interno:', error);
+      res.status(500).json({ error: 'Erro ao cadastrar usuário' });
+    }
   },
 
   async login(req: Request, res: Response): Promise<void> {
-    // 🔔 Log para confirmar que a requisição de login chegou ao servidor
     console.log('🔔 POST /auth/login recebido:', req.body);
 
     const { email, senha } = req.body;
