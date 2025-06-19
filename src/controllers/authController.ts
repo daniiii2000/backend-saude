@@ -83,9 +83,14 @@ const authController = {
         });
         res.status(201).json({ message: 'Profissional cadastrado com sucesso', id: novoProfissional.id });
       }
-    } catch (error) {
-      console.error('[authController.register] Erro interno:', error);
-      res.status(500).json({ error: 'Erro ao cadastrar usuário' });
+    } catch (error: any) {
+      // Trata duplicação de email
+      if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+        res.status(400).json({ error: 'Esse e-mail já está cadastrado' });
+      } else {
+        console.error('[authController.register] Erro interno:', error);
+        res.status(500).json({ error: 'Erro ao cadastrar usuário' });
+      }
     }
   },
 
