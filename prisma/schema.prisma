@@ -3,12 +3,10 @@ generator client {
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
 
 model Paciente {
   id                       String    @id @default(uuid())
@@ -23,13 +21,14 @@ model Paciente {
   alergias                 String?
   doencas                  String?
   cirurgias                String?
-  // — Nuevos campos —
+  planoDeSaude             String?   // Nuevo campo
+  hospitalPreferido        String?   // Nuevo campo
   emergencyContactPhone    String    // Teléfono de contacto de un tercero
   biometricEnabled         Boolean   @default(false) // Marca si activó FaceID/TouchID
   criadoEm                 DateTime  @default(now())
 }
 
- model Profissional {
+model Profissional {
   id                      String    @id @default(uuid())
   nome                    String
   email                   String    @unique
@@ -47,6 +46,3 @@ model Paciente {
   biometricEnabled        Boolean   @default(false)
   criadoEm                DateTime  @default(now())
 }
-
-
-
