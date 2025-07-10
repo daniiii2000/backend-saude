@@ -27,25 +27,22 @@ const authController = {
       alergias,
       doencas,
       cirurgias,
-      planoDeSaude,       // <-- Agregado
-      hospitalPreferido,   // <-- Agregado
+      planoDeSaude,
+      hospitalPreferido,
       emergencyContactPhone,
       biometricEnabled = false,
     } = req.body;
 
-    // Normaliza e valida tipo
     const tipoNormalized = (tipo || '').toLowerCase().trim();
     if (!['paciente', 'profissional'].includes(tipoNormalized)) {
       res.status(400).json({ error: 'Tipo inválido. Deve ser "paciente" ou "profissional".' });
       return;
     }
 
-    // Normaliza telefones
     const telefoneClean = String(telefone).replace(/\D/g, '');
     const emergencyClean = String(emergencyContactPhone).replace(/\D/g, '');
 
     try {
-      // Verifica duplicado por email
       const existente =
         tipoNormalized === 'paciente'
           ? await prisma.paciente.findUnique({ where: { email } })
@@ -56,16 +53,13 @@ const authController = {
         return;
       }
 
-      // Valida telefone de emergência
       if (!/^\d{8,15}$/.test(emergencyClean)) {
         res.status(400).json({ error: 'Telefone de contato de emergência inválido' });
         return;
       }
 
-      // Hash da senha
       const hashedPassword = await bcrypt.hash(senha, 10);
 
-      // Criação no banco
       if (tipoNormalized === 'paciente') {
         const novoPaciente = await prisma.paciente.create({
           data: {
@@ -80,8 +74,8 @@ const authController = {
             alergias,
             doencas,
             cirurgias,
-            planoDeSaude,        // <-- Agregado aquí
-            hospitalPreferido,    // <-- Agregado aquí
+            planoDeSaude,
+            hospitalPreferido,
             emergencyContactPhone: emergencyClean,
             biometricEnabled,
           },
@@ -109,10 +103,10 @@ const authController = {
         res.status(201).json({ message: 'Profissional cadastrado com sucesso', id: novoProfissional.id });
       }
     } catch (error: any) {
+      console.error('[authController.register] Erro interno:', error);
       if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
         res.status(400).json({ error: 'Esse e-mail já está cadastrado' });
       } else {
-        console.error('[authController.register] Erro interno:', error);
         res.status(500).json({ error: 'Erro ao cadastrar usuário' });
       }
     }
@@ -122,6 +116,7 @@ const authController = {
   // Login de usuário
   // ---------------------------------------------------
   async login(req: Request, res: Response): Promise<void> {
+    console.log('🔔 POST /auth/login recebido, body:', req.body);
     const { email, senha } = req.body;
     if (!email || !senha) {
       res.status(400).json({ error: 'Email e senha são obrigatórios.' });
@@ -129,36 +124,41 @@ const authController = {
     }
 
     try {
-      // Busca primeiro em pacientes
+      // Primer log de búsqueda
+      console.log('🔍 Buscando paciente com email:', email);
       const pacienteRecord = await prisma.paciente.findUnique({ where: { email } });
       let user;
       let tipo: 'paciente' | 'profissional';
 
       if (pacienteRecord) {
+        console.log('✅ Encontrado paciente:', pacienteRecord.id);
         user = pacienteRecord;
         tipo = 'paciente';
       } else {
-        // Se não for paciente, busca em profissionais
+        console.log('🔍 Buscando profissional com email:', email);
         const profissionalRecord = await prisma.profissional.findUnique({ where: { email } });
         if (!profissionalRecord) {
+          console.warn('❌ Usuário não encontrado para email:', email);
           res.status(401).json({ error: 'Credenciais inválidas.' });
           return;
         }
+        console.log('✅ Encontrado profissional:', profissionalRecord.id);
         user = profissionalRecord;
         tipo = 'profissional';
       }
 
-      // Verifica senha
+      console.log('🔐 Comparando senha para usuário:', user.id);
       const senhaValida = await bcrypt.compare(senha, user.senha);
+      console.log('🔐 Resultado bcrypt.compare:', senhaValida);
       if (!senhaValida) {
+        console.warn('❌ Senha incorreta para usuário:', user.id);
         res.status(401).json({ error: 'Credenciais inválidas.' });
         return;
       }
 
-      // Gera JWT
+      console.log('🎟️ Gerando token JWT para usuário:', user.id);
       const token = jwt.sign({ id: user.id, tipo }, JWT_SECRET, { expiresIn: '7d' });
 
-      // Retorna token e dados do usuário
       res.json({
         token,
         usuario: {
