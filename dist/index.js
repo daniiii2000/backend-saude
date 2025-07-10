@@ -53,7 +53,7 @@ app.use((req, res, next) => {
 });
 // ✅ Registro das rotas
 app.use('/auth', authRoutes_1.default);
-app.use('/paciente', pacienteRoutes_1.default);
+app.use('/pacientes', pacienteRoutes_1.default);
 app.use('/profissional', profissionalRoutes_1.default);
 app.use(pacienteQrRoutes_1.default); // ✅ Rota de QR ativa fora de prefixo "/paciente"
 app.get('/', (req, res) => {

@@ -24,16 +24,61 @@ router.get('/meus-dados', authMiddleware_1.authMiddleware, (0, authorize_1.autho
 // ✅ Atualizar dados do próprio paciente
 router.patch('/atualizar', authMiddleware_1.authMiddleware, (0, authorize_1.authorize)('paciente'), async (req, res) => {
     const { id } = req.user;
-    const { nome, telefone, sexo, doencas, alergias, cirurgias, tipoSanguineo } = req.body;
+    const { nome, telefone, sexo, doencas, alergias, cirurgias, tipoSanguineo, planoDeSaude, hospitalPreferido } = req.body;
     try {
         const paciente = await prisma.paciente.update({
             where: { id },
-            data: { nome, telefone, sexo, doencas, alergias, cirurgias, tipoSanguineo },
+            data: {
+                nome,
+                telefone,
+                sexo,
+                doencas,
+                alergias,
+                cirurgias,
+                tipoSanguineo,
+                planoDeSaude,
+                hospitalPreferido
+            },
         });
         res.json({ message: 'Dados atualizados com sucesso', paciente });
     }
     catch (error) {
         res.status(400).json({ error: 'Erro ao atualizar dados' });
+    }
+});
+// ✅ Cadastro de novo paciente com todos os campos obrigatórios
+router.post('/', async (req, res) => {
+    const { nome, email, senha, cpf, sexo, telefone, tipo, tipoSanguineo, alergias, doencas, cirurgias, planoDeSaude, hospitalPreferido, emergencyContactPhone, biometricEnabled } = req.body;
+    if (!nome || !email || !senha || !cpf || !sexo || !telefone ||
+        !tipo || !emergencyContactPhone) {
+        res.status(400).json({ error: 'Campos obrigatórios faltando' });
+        return;
+    }
+    try {
+        const novoPaciente = await prisma.paciente.create({
+            data: {
+                nome,
+                email,
+                senha,
+                cpf,
+                sexo,
+                telefone,
+                tipo,
+                tipoSanguineo,
+                alergias,
+                doencas,
+                cirurgias,
+                planoDeSaude,
+                hospitalPreferido,
+                emergencyContactPhone,
+                biometricEnabled: biometricEnabled ?? false
+            }
+        });
+        res.status(201).json(novoPaciente);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao cadastrar paciente' });
     }
 });
 exports.default = router;

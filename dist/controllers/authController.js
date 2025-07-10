@@ -1,29 +1,32 @@
 "use strict";
+// src/controllers/authController.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const prisma = new client_1.PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'chave_padrao';
 const authController = {
+    // ---------------------------------------------------
+    // Registro de usuário
+    // ---------------------------------------------------
     async register(req, res) {
         console.log('🔔 POST /auth/register recebido:', req.body);
         const { nome, email, senha, cpf, sexo, telefone, tipo, tipoSanguineo, profissao, alergias, doencas, cirurgias, emergencyContactPhone, biometricEnabled = false, } = req.body;
-        // Log para verificar o tipo exato
-        console.log('››› Tipo recebido:', tipo);
-        // Normaliza telefones para ficar só dígitos
+        // Normaliza e valida tipo
+        const tipoNormalized = (tipo || '').toLowerCase().trim();
+        if (!['paciente', 'profissional'].includes(tipoNormalized)) {
+            res.status(400).json({ error: 'Tipo inválido. Deve ser "paciente" ou "profissional".' });
+            return;
+        }
+        // Normaliza telefones
         const telefoneClean = String(telefone).replace(/\D/g, '');
         const emergencyClean = String(emergencyContactPhone).replace(/\D/g, '');
         try {
-            // 1. Normaliza e valida o tipo
-            const tipoNormalized = (tipo || '').toLowerCase().trim();
-            if (!['paciente', 'profissional'].includes(tipoNormalized)) {
-                res.status(400).json({ error: 'Tipo inválido. Deve ser "paciente" ou "profissional".' });
-                return;
-            }
-            // 2. Verifica se já existe usuário com este email
+            // Verifica duplicado por email
             const existente = tipoNormalized === 'paciente'
                 ? await prisma.paciente.findUnique({ where: { email } })
                 : await prisma.profissional.findUnique({ where: { email } });
@@ -31,15 +34,14 @@ const authController = {
                 res.status(400).json({ error: 'Email já cadastrado' });
                 return;
             }
-            // 3. Valida telefone de emergência (apenas dígitos, 8–15 chars)
-            const phoneRegex = /^\d{8,15}$/;
-            if (!phoneRegex.test(emergencyClean)) {
+            // Valida telefone de emergência
+            if (!/^\d{8,15}$/.test(emergencyClean)) {
                 res.status(400).json({ error: 'Telefone de contato de emergência inválido' });
                 return;
             }
-            // 4. Hash da senha
+            // Hash da senha
             const hashedPassword = await bcryptjs_1.default.hash(senha, 10);
-            // 5. Cria o registro no banco
+            // Criação no banco
             if (tipoNormalized === 'paciente') {
                 const novoPaciente = await prisma.paciente.create({
                     data: {
@@ -92,8 +94,57 @@ const authController = {
             }
         }
     },
+    // ---------------------------------------------------
+    // Login de usuário
+    // ---------------------------------------------------
     async login(req, res) {
-        // ... seu código de login permanece inalterado
+        const { email, senha } = req.body;
+        if (!email || !senha) {
+            res.status(400).json({ error: 'Email e senha são obrigatórios.' });
+            return;
+        }
+        try {
+            // Busca primeiro em pacientes
+            const pacienteRecord = await prisma.paciente.findUnique({ where: { email } });
+            let user;
+            let tipo;
+            if (pacienteRecord) {
+                user = pacienteRecord;
+                tipo = 'paciente';
+            }
+            else {
+                // Se não for paciente, busca em profissionais
+                const profissionalRecord = await prisma.profissional.findUnique({ where: { email } });
+                if (!profissionalRecord) {
+                    res.status(401).json({ error: 'Credenciais inválidas.' });
+                    return;
+                }
+                user = profissionalRecord;
+                tipo = 'profissional';
+            }
+            // Verifica senha
+            const senhaValida = await bcryptjs_1.default.compare(senha, user.senha);
+            if (!senhaValida) {
+                res.status(401).json({ error: 'Credenciais inválidas.' });
+                return;
+            }
+            // Gera JWT
+            const token = jsonwebtoken_1.default.sign({ id: user.id, tipo }, JWT_SECRET, { expiresIn: '7d' });
+            // Retorna token e dados do usuário
+            res.json({
+                token,
+                usuario: {
+                    id: user.id,
+                    nome: user.nome,
+                    email: user.email,
+                    tipo,
+                },
+            });
+        }
+        catch (error) {
+            console.error('[authController.login] Erro interno:', error);
+            res.status(500).json({ error: 'Erro ao autenticar usuário.' });
+        }
     },
 };
 exports.default = authController;

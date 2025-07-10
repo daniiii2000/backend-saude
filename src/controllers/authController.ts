@@ -27,6 +27,8 @@ const authController = {
       alergias,
       doencas,
       cirurgias,
+      planoDeSaude,       // <-- Agregado
+      hospitalPreferido,   // <-- Agregado
       emergencyContactPhone,
       biometricEnabled = false,
     } = req.body;
@@ -78,6 +80,8 @@ const authController = {
             alergias,
             doencas,
             cirurgias,
+            planoDeSaude,        // <-- Agregado aquí
+            hospitalPreferido,    // <-- Agregado aquí
             emergencyContactPhone: emergencyClean,
             biometricEnabled,
           },
