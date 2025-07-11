@@ -1,3 +1,4 @@
+// src/middlewares/authMiddleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
@@ -7,17 +8,23 @@ interface TokenPayload {
   id: string;
   email: string;
   tipo: string;
+  profissao?: string;   // ✅ agora incluímos a profissão
   iat: number;
   exp: number;
 }
 
+// permite acessar req.user nos handlers
 declare module 'express-serve-static-core' {
   interface Request {
     user?: TokenPayload;
   }
 }
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+export function authMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -31,7 +38,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
     req.user = decoded;
     next();
-  } catch (err) {
+  } catch {
     res.status(403).json({ error: 'Token inválido' });
   }
 }
