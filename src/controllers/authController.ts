@@ -1,5 +1,3 @@
-// src/controllers/authController.ts
-
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -128,6 +126,7 @@ const authController = {
       const pacienteRecord = await prisma.paciente.findUnique({ where: { email } });
       let user;
       let tipo: 'paciente' | 'profissional';
+      let profissao: string | undefined = undefined;
 
       if (pacienteRecord) {
         console.log('✅ Encontrado paciente:', pacienteRecord.id);
@@ -144,6 +143,7 @@ const authController = {
         console.log('✅ Encontrado profissional:', profissionalRecord.id);
         user = profissionalRecord;
         tipo = 'profissional';
+        profissao = profissionalRecord.profissao || '';
       }
 
       console.log('🔐 Comparando senha para usuário:', user.id);
@@ -156,7 +156,7 @@ const authController = {
       }
 
       console.log('🎟️ Gerando token JWT para usuário:', user.id);
-      const token = jwt.sign({ id: user.id, tipo }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ id: user.id, tipo, profissao }, JWT_SECRET, { expiresIn: '7d' });
 
       res.json({
         token,
@@ -165,6 +165,7 @@ const authController = {
           nome: user.nome,
           email: user.email,
           tipo,
+          profissao,
         },
       });
     } catch (error) {
