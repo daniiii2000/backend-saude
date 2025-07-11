@@ -23,6 +23,8 @@ router.get('/paciente/qr/:id', authMiddleware, async (req: Request, res: Respons
       where: { id },
       select: {
         nome: true,
+        email:true,
+        telefone: true,
         tipoSanguineo: true,
         doencas: true,
         alergias: true,
