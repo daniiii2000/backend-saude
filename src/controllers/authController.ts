@@ -1,6 +1,6 @@
 // src/controllers/authController.ts
 
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -124,7 +124,6 @@ const authController = {
     }
 
     try {
-      // Primer log de búsqueda
       console.log('🔍 Buscando paciente com email:', email);
       const pacienteRecord = await prisma.paciente.findUnique({ where: { email } });
       let user;
@@ -171,6 +170,76 @@ const authController = {
     } catch (error) {
       console.error('[authController.login] Erro interno:', error);
       res.status(500).json({ error: 'Erro ao autenticar usuário.' });
+    }
+  },
+
+  // ---------------------------------------------------
+  // Retorna perfil completo
+  // ---------------------------------------------------
+  async perfil(req: Request, res: Response): Promise<void> {
+    const user = (req as any).user;
+    if (!user) {
+      res.status(401).json({ error: 'Usuário não autenticado' });
+      return;
+    }
+
+    const { id, tipo } = user;
+    try {
+      if (tipo === 'paciente') {
+        const paciente = await prisma.paciente.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            cpf: true,
+            sexo: true,
+            telefone: true,
+            tipoSanguineo: true,
+            alergias: true,
+            doencas: true,
+            cirurgias: true,
+            planoDeSaude: true,
+            hospitalPreferido: true,
+            emergencyContactPhone: true,
+            biometricEnabled: true,
+            criadoEm: true,
+          },
+        });
+        if (!paciente) {
+          res.status(404).json({ error: 'Paciente não encontrado' });
+          return;
+        }
+        res.json(paciente);
+      } else {
+        const profissional = await prisma.profissional.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            cpf: true,
+            sexo: true,
+            telefone: true,
+            profissao: true,
+            tipoSanguineo: true,
+            alergias: true,
+            doencas: true,
+            cirurgias: true,
+            emergencyContactPhone: true,
+            biometricEnabled: true,
+            criadoEm: true,
+          },
+        });
+        if (!profissional) {
+          res.status(404).json({ error: 'Profissional não encontrado' });
+          return;
+        }
+        res.json(profissional);
+      }
+    } catch (error) {
+      console.error('[authController.perfil] Erro interno:', error);
+      res.status(500).json({ error: 'Erro ao buscar dados do perfil' });
     }
   },
 };
