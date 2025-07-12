@@ -26,6 +26,10 @@ model Paciente {
   emergencyContactPhone    String    // Teléfono de contacto de un tercero
   biometricEnabled         Boolean   @default(false) // Marca si activó FaceID/TouchID
   criadoEm                 DateTime  @default(now())
+
+  // Campos para recuperación de contraseña
+  resetToken               String?
+  resetExpires             DateTime?
 }
 
 model Profissional {
@@ -45,4 +49,8 @@ model Profissional {
   emergencyContactPhone   String
   biometricEnabled        Boolean   @default(false)
   criadoEm                DateTime  @default(now())
+
+  // Campos para recuperación de contraseña
+  resetToken              String?
+  resetExpires            DateTime?
 }
