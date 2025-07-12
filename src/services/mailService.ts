@@ -6,12 +6,12 @@ dotenv.config();
 
 // Configura o transporter para usar o relay SMTP do SparkPost
 export const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.sparkpostmail.com',
-  port: Number(process.env.SMTP_PORT) || 587,
+  host: process.env.SMTP_HOST!,
+  port: Number(process.env.SMTP_PORT!),
   secure: false, // false para STARTTLS
   auth: {
-    user: process.env.SMTP_USER || 'SMTP_Injection',
-    pass: process.env.SMTP_PASS!, 
+    user: process.env.SMTP_USER!, // obrigatório: 'SMTP_Injection'
+    pass: process.env.SMTP_PASS!, // obrigatório: sua API Key do SparkPost
   },
   tls: {
     rejectUnauthorized: false,
@@ -31,7 +31,7 @@ transporter.verify()
  * Usa deep link definido em FRONTEND_URL, sem repetir caminho.
  */
 export async function enviarEmailRecuperacao(toEmail: string, token: string) {
-  const frontend = process.env.FRONTEND_URL?.replace(/\/$/, '') || '';
+  const frontend = process.env.FRONTEND_URL?.replace(/\/$/, '')!;
   // Se FRONTEND_URL for algo como "appsaudeexpopaciente://reset-password",
   // basta anexar querystring ?token=
   const resetUrl = `${frontend}?token=${token}`;
