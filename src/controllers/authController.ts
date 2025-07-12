@@ -3,31 +3,22 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { transporter, enviarEmailRecuperacao } from '../services/mailService';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'chave_padrao';
 
 const authController = {
+
   // ---------------------------------------------------
   // Registro de usuário
   // ---------------------------------------------------
   async register(req: Request, res: Response): Promise<void> {
     const {
-      nome,
-      email,
-      senha,
-      cpf,
-      sexo,
-      telefone,
-      tipo,
-      tipoSanguineo,
-      profissao,
-      alergias,
-      doencas,
-      cirurgias,
-      planoDeSaude,
-      hospitalPreferido,
-      emergencyContactPhone,
+      nome, email, senha, cpf, sexo, telefone, tipo,
+      tipoSanguineo, profissao, alergias, doencas, cirurgias,
+      planoDeSaude, hospitalPreferido, emergencyContactPhone,
       biometricEnabled = false,
     } = req.body;
 
@@ -41,10 +32,9 @@ const authController = {
     const emergencyClean = String(emergencyContactPhone).replace(/\D/g, '');
 
     try {
-      const existente =
-        tipoNormalized === 'paciente'
-          ? await prisma.paciente.findUnique({ where: { email } })
-          : await prisma.profissional.findUnique({ where: { email } });
+      const existente = tipoNormalized === 'paciente'
+        ? await prisma.paciente.findUnique({ where: { email } })
+        : await prisma.profissional.findUnique({ where: { email } });
 
       if (existente) {
         res.status(400).json({ error: 'Email já cadastrado' });
@@ -61,19 +51,10 @@ const authController = {
       if (tipoNormalized === 'paciente') {
         const novoPaciente = await prisma.paciente.create({
           data: {
-            nome,
-            email,
-            senha: hashedPassword,
-            cpf,
-            sexo,
-            telefone: telefoneClean,
-            tipo: tipoNormalized,
-            tipoSanguineo,
-            alergias,
-            doencas,
-            cirurgias,
-            planoDeSaude,
-            hospitalPreferido,
+            nome, email, senha: hashedPassword, cpf, sexo,
+            telefone: telefoneClean, tipo: tipoNormalized,
+            tipoSanguineo, alergias, doencas, cirurgias,
+            planoDeSaude, hospitalPreferido,
             emergencyContactPhone: emergencyClean,
             biometricEnabled,
           },
@@ -82,18 +63,10 @@ const authController = {
       } else {
         const novoProfissional = await prisma.profissional.create({
           data: {
-            nome,
-            email,
-            senha: hashedPassword,
-            cpf,
-            sexo,
-            telefone: telefoneClean,
-            tipo: tipoNormalized,
-            profissao,
-            tipoSanguineo,
-            alergias,
-            doencas,
-            cirurgias,
+            nome, email, senha: hashedPassword, cpf, sexo,
+            telefone: telefoneClean, tipo: tipoNormalized,
+            profissao, tipoSanguineo, alergias,
+            doencas, cirurgias,
             emergencyContactPhone: emergencyClean,
             biometricEnabled,
           },
@@ -117,22 +90,17 @@ const authController = {
     }
 
     try {
-      let user: any;
-      let tipo: 'paciente' | 'profissional';
-      let profissao: string | undefined;
-
+      let user: any, tipo: 'paciente' | 'profissional', profissao: string | undefined;
       const paciente = await prisma.paciente.findUnique({ where: { email } });
       if (paciente) {
-        user = paciente;
-        tipo = 'paciente';
+        user = paciente; tipo = 'paciente';
       } else {
         const profissional = await prisma.profissional.findUnique({ where: { email } });
         if (!profissional) {
           res.status(401).json({ error: 'Credenciais inválidas' });
           return;
         }
-        user = profissional;
-        tipo = 'profissional';
+        user = profissional; tipo = 'profissional';
         profissao = profissional.profissao || '';
       }
 
@@ -144,22 +112,56 @@ const authController = {
 
       const tokenPayload: any = { id: user.id, tipo };
       if (tipo === 'profissional') tokenPayload.profissao = profissao;
-
       const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
 
       res.json({
         token,
-        usuario: {
-          id: user.id,
-          nome: user.nome,
-          email: user.email,
-          tipo,
-          profissao,
-        },
+        usuario: { id: user.id, nome: user.nome, email: user.email, tipo, profissao },
       });
     } catch (error) {
       console.error('[login] erro:', error);
       res.status(500).json({ error: 'Erro ao autenticar' });
+    }
+  },
+
+  // ---------------------------------------------------
+  // Esqueci a senha
+  // ---------------------------------------------------
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    const { email } = req.body;
+    try {
+      const paciente = await prisma.paciente.findUnique({ where: { email } });
+      const profissional = await prisma.profissional.findUnique({ where: { email } });
+      const userType = paciente ? 'paciente' : profissional ? 'profissional' : null;
+
+      if (!userType) {
+        res.status(404).json({ error: 'Email não encontrado' });
+        return;
+      }
+
+      // Gera token de recuperação e expiração (1h)
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetExpires = new Date(Date.now() + 3600000);
+
+      // Atualiza explicitamente o modelo correto
+      if (userType === 'paciente') {
+        await prisma.paciente.update({
+          where: { email },
+          data: { resetToken, resetExpires },
+        });
+      } else {
+        await prisma.profissional.update({
+          where: { email },
+          data: { resetToken, resetExpires },
+        });
+      }
+
+      // Dispara o e-mail de recuperação
+      await enviarEmailRecuperacao(email, resetToken);
+      res.status(200).json({ message: 'E-mail de recuperação enviado' });
+    } catch (err: any) {
+      console.error('🛑 ERRO em forgotPassword:', err);
+      res.status(500).json({ erro: err.message || 'Erro interno no servidor' });
     }
   },
 
@@ -189,6 +191,7 @@ const authController = {
       res.status(500).json({ error: 'Erro ao buscar perfil' });
     }
   },
+
 };
 
 export default authController;
