@@ -10,7 +10,6 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'chave_padrao';
 
 const authController = {
-
   // ---------------------------------------------------
   // Registro de usuário
   // ---------------------------------------------------
@@ -134,21 +133,17 @@ const authController = {
     try {
       const paciente = await prisma.paciente.findUnique({ where: { email } });
       const profissional = await prisma.profissional.findUnique({ where: { email } });
-      const userType = paciente ? 'paciente' : profissional ? 'profissional' : null;
-
-      if (!userType) {
-        console.log('[forgot-password] Email não encontrado:', email);
-        res.status(404).json({ error: 'Email não encontrado' });
+      if (!paciente && !profissional) {
+        console.log('[forgot-password] email não encontrado, retornando 200');
+        res.status(200).json({ message: 'Se você solicitou recuperação, verifique seu e-mail.' });
         return;
       }
 
-      // Gera token de recuperação e expiração (1h)
       const resetToken = crypto.randomBytes(32).toString('hex');
       const resetExpires = new Date(Date.now() + 3600000);
       console.log('[forgot-password] Token gerado:', resetToken);
 
-      // Atualiza explicitamente o modelo correto
-      if (userType === 'paciente') {
+      if (paciente) {
         await prisma.paciente.update({
           where: { email },
           data: { resetToken, resetExpires },
@@ -160,15 +155,64 @@ const authController = {
         });
       }
 
-      // Dispara o e-mail de recuperação
       console.log('[forgot-password] Chamando enviarEmailRecuperacao...');
       await enviarEmailRecuperacao(email, resetToken);
-      console.log('[forgot-password] enviarEmailRecuperacao finalizado');
+      console.log('[forgot-password] e-mail disparado');
 
-      res.status(200).json({ message: 'E-mail de recuperação enviado' });
+      res.status(200).json({ message: 'Se você solicitou recuperação, verifique seu e-mail.' });
     } catch (err: any) {
-      console.error('[forgot-password] ERRO geral:', err);
-      res.status(500).json({ erro: err.message || 'Erro interno no servidor' });
+      console.error('[forgot-password] ERRO:', err);
+      res.status(500).json({ error: 'Erro interno ao processar recuperação de senha.' });
+    }
+  },
+
+  // ---------------------------------------------------
+  // Redefinir a senha
+  // ---------------------------------------------------
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    const { email, token, newPassword } = req.body;
+    console.log('[reset-password] Entrada recebida para:', { email, token });
+
+    if (!email || !token || !newPassword) {
+      res.status(400).json({
+        error: 'Faltam parâmetros: email, token e newPassword são obrigatórios.',
+      });
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const paciente = await prisma.paciente.findFirst({
+        where: { email, resetToken: token, resetExpires: { gt: now } },
+      });
+      const profissional = await prisma.profissional.findFirst({
+        where: { email, resetToken: token, resetExpires: { gt: now } },
+      });
+
+      if (!paciente && !profissional) {
+        console.log('[reset-password] token inválido ou expirado');
+        res.status(400).json({ error: 'Token inválido ou expirado.' });
+        return;
+      }
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      if (paciente) {
+        await prisma.paciente.update({
+          where: { email },
+          data: { senha: hashed, resetToken: null, resetExpires: null },
+        });
+      } else {
+        await prisma.profissional.update({
+          where: { email },
+          data: { senha: hashed, resetToken: null, resetExpires: null },
+        });
+      }
+      console.log('[reset-password] Senha redefinida com sucesso para:', email);
+
+      res.status(200).json({ message: 'Senha redefinida com sucesso.' });
+    } catch (err: any) {
+      console.error('[reset-password] ERRO:', err);
+      res.status(500).json({ error: 'Erro interno ao redefinir senha.' });
     }
   },
 
@@ -198,7 +242,6 @@ const authController = {
       res.status(500).json({ error: 'Erro ao buscar perfil' });
     }
   },
-
 };
 
 export default authController;
