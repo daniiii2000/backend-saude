@@ -129,12 +129,15 @@ const authController = {
   // ---------------------------------------------------
   async forgotPassword(req: Request, res: Response): Promise<void> {
     const { email } = req.body;
+    console.log('[forgot-password] Entrada recebida para:', email);
+
     try {
       const paciente = await prisma.paciente.findUnique({ where: { email } });
       const profissional = await prisma.profissional.findUnique({ where: { email } });
       const userType = paciente ? 'paciente' : profissional ? 'profissional' : null;
 
       if (!userType) {
+        console.log('[forgot-password] Email não encontrado:', email);
         res.status(404).json({ error: 'Email não encontrado' });
         return;
       }
@@ -142,6 +145,7 @@ const authController = {
       // Gera token de recuperação e expiração (1h)
       const resetToken = crypto.randomBytes(32).toString('hex');
       const resetExpires = new Date(Date.now() + 3600000);
+      console.log('[forgot-password] Token gerado:', resetToken);
 
       // Atualiza explicitamente o modelo correto
       if (userType === 'paciente') {
@@ -157,10 +161,13 @@ const authController = {
       }
 
       // Dispara o e-mail de recuperação
+      console.log('[forgot-password] Chamando enviarEmailRecuperacao...');
       await enviarEmailRecuperacao(email, resetToken);
+      console.log('[forgot-password] enviarEmailRecuperacao finalizado');
+
       res.status(200).json({ message: 'E-mail de recuperação enviado' });
     } catch (err: any) {
-      console.error('🛑 ERRO em forgotPassword:', err);
+      console.error('[forgot-password] ERRO geral:', err);
       res.status(500).json({ erro: err.message || 'Erro interno no servidor' });
     }
   },
