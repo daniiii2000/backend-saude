@@ -32,20 +32,25 @@ transporter.verify()
  */
 export async function enviarEmailRecuperacao(toEmail: string, token: string) {
   const frontend = process.env.FRONTEND_URL?.replace(/\/$/, '')!;
-  // Se FRONTEND_URL for algo como "appsaudeexpopaciente://reset-password",
-  // basta anexar querystring ?token=
   const resetUrl = `${frontend}?token=${token}`;
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM!,      
-    to: toEmail,
-    subject: 'Recuperação de Senha',
-    html: `
-      <p>Você solicitou recuperação de senha.</p>
-      <p>Clique no link para redefinir sua senha:</p>
-      <p><a href="${resetUrl}">${resetUrl}</a></p>
-      <hr/>
-      <p>Se você não solicitou, ignore este e-mail.</p>
-    `,
-  });
+  try {
+    console.log('[mailService] tentando enviar e-mail de recuperação para', toEmail);
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_FROM!,
+      to: toEmail,
+      subject: 'Recuperação de Senha',
+      html: `
+        <p>Você solicitou recuperação de senha.</p>
+        <p>Clique no link para redefinir sua senha:</p>
+        <p><a href="${resetUrl}">${resetUrl}</a></p>
+        <hr/>
+        <p>Se você não solicitou, ignore este e-mail.</p>
+      `,
+    });
+    console.log('[mailService] e-mail enviado com sucesso, messageId:', info.messageId);
+  } catch (err) {
+    console.error('[mailService] ERRO ao enviar e-mail de recuperação:', err);
+    throw err; // relança para que o controlador possa tratar e retornar erro 500
+  }
 }
